@@ -1,13 +1,13 @@
 {
   "name": "clasp-gas-skill",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Connect Google Apps Script to your AI agent via clasp — login, create, push, deploy, and get the correct web app URL.",
   "author": {
-    "name": "mathruffian-dot",
-    "url": "https://github.com/mathruffian-dot"
+    "name": "changyiwu",
+    "url": "https://github.com/changyiwu"
   },
-  "homepage": "https://github.com/mathruffian-dot/clasp-gas-skill",
-  "repository": "https://github.com/mathruffian-dot/clasp-gas-skill",
+  "homepage": "https://github.com/changyiwu/clasp-gas-skill",
+  "repository": "https://github.com/changyiwu/clasp-gas-skill",
   "license": "MIT",
   "keywords": ["clasp", "apps-script", "google", "spreadsheet", "webapp", "agent-skill"],
   "skills": "./skills/",
@@ -15,7 +15,7 @@
     "displayName": "clasp ＋ Apps Script 連線",
     "shortDescription": "讓 agent 讀得到、改得到、推得回你線上的 Apps Script 程式碼",
     "longDescription": "帶使用者走完 clasp 登入、建立綁定試算表的專案、推送程式碼、部署為網頁應用程式並取得正確網址的完整流程。內建 clasp v3 指令對照、網址取得的正確做法，以及卡住時的退場機制。",
-    "developerName": "mathruffian-dot",
+    "developerName": "changyiwu",
     "category": "Developer Tools",
     "capabilities": ["Interactive"],
     "defaultPrompt": [

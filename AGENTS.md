@@ -14,8 +14,8 @@
 ## 目標與路線圖
 
 - [x] 階段一：完成三層級專案初始化與既有內容盤點
-- [ ] 階段二：強化四 Agent 安裝器、冪等更新與逐檔驗證
-- [ ] 階段三：修正 clasp 跨平台命令、授權與部署流程說明
+- [x] 階段二：強化四 Agent 安裝器、冪等更新與逐檔驗證
+- [x] 階段三：修正 clasp 跨平台命令、授權與部署流程說明
 - [ ] 階段四：在四個 Agent 完成實機觸發與 clasp 端到端測試
 - [ ] 階段五：經使用者授權後同步四個全域 Skill 副本
 
@@ -27,7 +27,8 @@ clasp-gas-skill/
 │   └── plugin.json                 # Codex plugin manifest
 ├── scripts/
 │   ├── install.ps1                 # Windows 安裝器
-│   └── install.sh                  # macOS／Linux 安裝器
+│   ├── install.sh                  # macOS／Linux 安裝器
+│   └── validate.ps1                # 結構、安全與 Windows 安裝冪等驗證
 ├── skills/
 │   └── clasp-setup/
 │       ├── SKILL.md                # 唯一的 Agent 工作流程來源
@@ -70,7 +71,7 @@ clasp-gas-skill/
 | Antigravity | `~/.gemini/config/skills/` |
 
 - 原始 Skill 只維護一份，安裝器負責複製到平台專屬全域目錄。
-- 全域安裝與專案安裝使用不同目標矩陣；專案安裝使用 `.claude/skills/` 與 `.agents/skills/`。
+- 安裝器只提供四平台全域安裝，不建立 repo 內的專案層級 Skill 副本。
 - 安裝必須可重複執行，不得產生 `clasp-setup/clasp-setup/` 巢狀目錄或留下已刪除的舊檔。
 - 安裝後用遞迴檔案清單與 SHA-256 驗證來源和目標一致。
 - 未經使用者明確要求，不覆蓋四個全域 Skill 副本；正式同步交給 `sync-skills`。
@@ -94,7 +95,7 @@ clasp-gas-skill/
 | 層級 | 平台 | 位置 | 讀取時機 |
 |------|------|------|---------|
 | L1 | 本地（GDrive） | `AGENTS.md`＋`handoff.md`（不進 git，只走雲端硬碟）＋`CLAUDE.md`（橋接） | 每個 session |
-| L2 | GitHub | 初始化中；預定 `changyiwu/clasp-gas-skill` | 指定時 |
+| L2 | GitHub | [`changyiwu/clasp-gas-skill`](https://github.com/changyiwu/clasp-gas-skill)（公開） | 指定時 |
 | L3 | Obsidian | `clasp-gas-skill/專案工作流程.md` | 有需要時 |
 
 ## 三個檔案的職責（依「時效性」分家，不是依「詳細程度」）
@@ -121,4 +122,3 @@ clasp-gas-skill/
 - 所有回應與文件使用繁體中文。
 - 修改前先確認計畫，優先保留原有資料結構。
 - 使用 `apply_patch` 編輯 repo 檔案；不要用 shell 重建檔案內容。
-

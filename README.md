@@ -25,19 +25,20 @@ clasp push  →  推回雲端，直接生效
 ## 技能會帶使用者走完的流程
 
 1. 前置檢查（Node 版本、Apps Script API 開關）
-2. `clasp login` — 提醒選個人 Google 帳號
+2. `clasp login` — 預設建議個人 Google 帳號，Workspace 受政策限制時提供管理員處理路徑
 3. 建立專案（可綁定既有試算表，或新建一份）
 4. 產出 `Code.gs` ＋ `index.html` 並 `push`
 5. 部署成網頁應用程式，**用正確的方式取得網址**
 6. 請使用者實測，確認資料真的有進試算表
 
-## 這份技能特別處理的三個坑
+## 這份技能特別處理的四個坑
 
 | 坑 | 症狀 | 技能怎麼處理 |
 |---|---|---|
 | **拿錯 ID 拼網址** | 給出去的網址打開是「網頁不存在」 | 強制走 `clasp open-web-app <deploymentId> --json`，禁止用 `scriptId` 去拼 `/macros/s/.../exec` |
 | **v2 舊指令名** | 「指令不存在」，然後 agent 開始亂試 | 內建 v2 → v3 對照表（`create`→`create-script`、`login --status`→`show-authorized-user` …） |
 | **受管理的公司／學校帳號** | `admin_policy_enforced`，使用者自己解不了 | 登入前就先提醒選個人 Gmail，撞到直接判定並給退路 |
+| **部署網址只有擁有者能開** | 自己測正常，分享給別人卻被拒絕 | 取得網址後再確認部署存取權，並用無痕視窗或第二帳號實測 |
 
 技能也內建了硬性的隱私紅線（不把真實姓名寫進雲端試算表）與**卡住就換路**的退場機制——clasp 是效率升級，不是做出成品的必要條件。
 
@@ -45,51 +46,33 @@ clasp push  →  推回雲端，直接生效
 
 ## 安裝
 
-Agent Skill 的規格是共通的，差別只在放哪個資料夾。**兩個目標資料夾就能涵蓋四個平台。**
+Agent Skill 的內容格式可以共用，但全域安裝採四個平台各自的正式目錄：
 
 | 平台 | 讀取的資料夾 |
 |---|---|
 | Claude Code | `~/.claude/skills/` |
 | ChatGPT 應用程式（Codex） | `~/.agents/skills/` |
-| AntiGravity 2 | `~/.agents/skills/` |
-| opencode | 以上兩個都讀（另外也讀 `~/.config/opencode/skills/`）|
+| OpenCode | `~/.config/opencode/skills/` |
+| Antigravity | `~/.gemini/config/skills/` |
 
 ### 一鍵安裝
 
 Windows（PowerShell）：
 
 ```powershell
-git clone https://github.com/mathruffian-dot/clasp-gas-skill.git
+git clone https://github.com/changyiwu/clasp-gas-skill.git
 .\clasp-gas-skill\scripts\install.ps1
 ```
 
 macOS／Linux：
 
 ```bash
-git clone https://github.com/mathruffian-dot/clasp-gas-skill.git
+git clone https://github.com/changyiwu/clasp-gas-skill.git
 bash ./clasp-gas-skill/scripts/install.sh
 ```
 
-腳本會把 `skills/clasp-setup` 同時複製到 `~/.claude/skills/` 與 `~/.agents/skills/`，四個平台一次到位。
-
-### 手動安裝
-
-Windows（PowerShell）：
-
-```powershell
-Copy-Item -Recurse -Force ".\clasp-gas-skill\skills\clasp-setup" "$env:USERPROFILE\.claude\skills\clasp-setup"
-Copy-Item -Recurse -Force ".\clasp-gas-skill\skills\clasp-setup" "$env:USERPROFILE\.agents\skills\clasp-setup"
-```
-
-macOS／Linux：
-
-```bash
-mkdir -p ~/.claude/skills ~/.agents/skills
-cp -r ./clasp-gas-skill/skills/clasp-setup ~/.claude/skills/
-cp -r ./clasp-gas-skill/skills/clasp-setup ~/.agents/skills/
-```
-
-只裝在單一專案的話，把同一個資料夾放進專案裡的 `.claude/skills/` 或 `.agents/skills/` 即可。
+全域模式只安裝到**已存在**的 Agent Skill 根目錄，不會替尚未安裝的工具建立空目錄。每個目標都會做遞迴 SHA-256 驗證；重複執行會更新原位置，不會產生巢狀 `clasp-setup/clasp-setup`。
+安裝器只提供全域安裝，不會在目前 repo 建立專案層級的 Skill 副本。
 
 > 裝完技能沒出現在清單裡 → 重開 agent 或開一個新對話。
 > 各平台的細節與差異見 [`skills/clasp-setup/references/platform-notes.md`](skills/clasp-setup/references/platform-notes.md)。
@@ -114,10 +97,10 @@ cp -r ./clasp-gas-skill/skills/clasp-setup ~/.agents/skills/
 ## 需求
 
 - **Node.js 22 以上**（clasp v3 的要求）
-- 一個**個人** Google 帳號（受管理的公司／學校 Workspace 帳號會被 `admin_policy_enforced` 擋下）
+- 建議使用個人 Google 帳號；Workspace 是否可用取決於網域政策，受限時需管理員 allow-list clasp 或提供內部 OAuth 專案
 - 到 <https://script.google.com/home/usersettings> 打開「Google Apps Script API」（開完要等 1–2 分鐘生效）
 
-技能本身不需要任何 API 金鑰，全部走 `npx @google/clasp` 與瀏覽器 OAuth。
+技能本身不需要任何 API 金鑰。Windows 走 `npx.cmd --yes @google/clasp@3`，macOS／Linux 走 `npx --yes @google/clasp@3` 與瀏覽器 OAuth。
 
 ---
 
@@ -136,8 +119,11 @@ clasp-gas-skill/
 │           └── platform-notes.md        ← 四平台安裝細節與 clasp MCP 接法
 ├── scripts/
 │   ├── install.ps1
-│   └── install.sh
+│   ├── install.sh
+│   └── validate.ps1                  ← 結構、編碼、安全與重複安裝驗證
 ├── AGENTS.md
+├── CLAUDE.md
+├── .gitattributes
 ├── LICENSE
 └── README.md
 ```
@@ -146,7 +132,21 @@ clasp-gas-skill/
 
 - 對照 **clasp v3** 撰寫並逐條核對過官方 README 與原始碼（含 `open-web-app` 的 `entryPoints` 行為）。
 - 網路上多數既有教學仍是 v2 語法，照著下會先撞「指令不存在」；技能內附完整的 v2 → v3 對照表。
-- clasp v3 另有實驗性的內建 MCP server（`npx -y @google/clasp mcp`），技能的主線流程刻意只用 CLI 以求穩定，MCP 接法列在 `platform-notes.md` 供進階使用者選用。
+- clasp v3 另有實驗性的內建 MCP server（Windows：`npx.cmd --yes @google/clasp@3 mcp`），技能的主線流程刻意只用 CLI 以求穩定，MCP 接法列在 `platform-notes.md` 供進階使用者選用。
+
+## 驗證
+
+Windows 可在 repo 根目錄執行：
+
+```powershell
+.\scripts\validate.ps1
+```
+
+驗證器會檢查 Skill／plugin 基本結構、四平台文件路徑、UTF-8 BOM、敏感資訊樣式，並在系統暫存目錄模擬四個全域根目錄、連續安裝兩次，確認來源與四個副本的 SHA-256 完全一致。
+
+## 來源與授權
+
+本 repo 接續修改自 [mathruffian-dot/clasp-gas-skill](https://github.com/mathruffian-dot/clasp-gas-skill)，保留原作者 MIT 著作權聲明；後續跨 Agent 安裝、驗證與安全流程由 `changyiwu` 維護。
 
 ## 授權
 

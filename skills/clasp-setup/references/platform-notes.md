@@ -1,20 +1,20 @@
 # 各平台差異說明
 
-技能本體（`SKILL.md`）是平台中立的，全程只用 `npx @google/clasp`，四個平台跑起來一模一樣。
-這份只記「不一樣的地方」。
+技能本體（`SKILL.md`）共用同一套 clasp v3 流程；平台差異集中在命令前綴、Skill 安裝位置與 MCP 設定。
+這份只記「不一樣的地方」。非 Windows agent 執行主流程前要先讀本檔。
 
 ---
 
 ## 技能安裝位置
 
-Agent Skill 的規格是共通的，差別只在放哪個資料夾。**兩個目標資料夾涵蓋四個平台。**
+Agent Skill 的內容格式可以共用；本 repo 的安裝器只安裝到四個平台各自的正式全域目錄。
 
-| 平台 | 使用者層級 | 專案層級 |
-|---|---|---|
-| Claude Code | `~/.claude/skills/clasp-setup/` | `.claude/skills/clasp-setup/` |
-| ChatGPT 應用程式／Codex | `~/.agents/skills/clasp-setup/` | `.agents/skills/clasp-setup/` |
-| AntiGravity 2 | `~/.agents/skills/clasp-setup/` | `.agents/skills/clasp-setup/` |
-| opencode | 以上兩個都會讀，另外也讀 `~/.config/opencode/skills/` | 同左，另有 `.opencode/skills/` |
+| 平台 | 全域位置 |
+|---|---|
+| Claude Code | `~/.claude/skills/clasp-setup/` |
+| ChatGPT 應用程式／Codex | `~/.agents/skills/clasp-setup/` |
+| OpenCode | `~/.config/opencode/skills/clasp-setup/` |
+| Antigravity | `~/.gemini/config/skills/clasp-setup/` |
 
 裝完沒出現在清單裡 → 重開 agent 或開一個新對話。
 
@@ -26,9 +26,10 @@ Agent Skill 的規格是共通的，差別只在放哪個資料夾。**兩個目
 
 | 環境 | 注意 |
 |---|---|
-| Windows PowerShell | **不要用 `&&` 串指令**（PowerShell 5.1 會語法錯誤），用 `;` |
-| Windows + 全域安裝 clasp | 可能撞執行原則：`Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`。**用 `npx` 就能整個繞開，這是預設做法** |
-| macOS／Linux | 無特殊處理 |
+| Windows PowerShell | 使用 `npx.cmd --yes @google/clasp@3 ...`；不要只寫 `npx`，它可能解析成受執行原則限制的 `npx.ps1`。不要用 `&&` 串指令（PowerShell 5.1 會語法錯誤），用 `;` |
+| macOS／Linux | 使用 `npx --yes @google/clasp@3 ...` |
+
+`SKILL.md` 主流程以 Windows 命令示範。macOS／Linux 只把每行開頭的 `npx.cmd --yes @google/clasp@3` 換成 `npx --yes @google/clasp@3`。
 
 ---
 
@@ -36,7 +37,7 @@ Agent Skill 的規格是共通的，差別只在放哪個資料夾。**兩個目
 
 `clasp login` 與首次部署授權都需要**真的打開瀏覽器**。
 
-- 在遠端／容器／CI 這類沒有瀏覽器的環境，改用 `npx @google/clasp login --no-localhost`。
+- 在遠端／容器／CI 這類沒有瀏覽器的環境，Windows 改用 `npx.cmd --yes @google/clasp@3 login --no-localhost`；macOS／Linux 使用 `npx --yes @google/clasp@3 login --no-localhost`。
 - 不論哪個平台，**選帳號與點「允許」只能使用者本人做**。技能會在這裡停下來等他，這是刻意的，不要跳過。
 
 ---
@@ -52,7 +53,7 @@ clasp v3 內建一個 stdio 的 MCP server，接上之後 agent 可以直接用�
 ### Claude Code
 
 ```bash
-claude mcp add clasp -- npx -y @google/clasp mcp
+claude mcp add clasp -- npx.cmd --yes @google/clasp@3 mcp
 ```
 
 clasp 官方也提供 plugin 形式：在 Claude Code 中執行 `/plugin install @google/clasp`。
@@ -63,8 +64,8 @@ clasp 官方也提供 plugin 形式：在 Claude Code 中執行 `/plugin install
 
 ```toml
 [mcp_servers.clasp]
-command = "npx"
-args = ["-y", "@google/clasp", "mcp"]
+command = "npx.cmd"
+args = ["--yes", "@google/clasp@3", "mcp"]
 ```
 
 改完重啟 Codex，用 `codex mcp list` 確認。
@@ -78,7 +79,7 @@ args = ["-y", "@google/clasp", "mcp"]
   "mcp": {
     "clasp": {
       "type": "local",
-      "command": ["npx", "-y", "@google/clasp", "mcp"],
+      "command": ["npx.cmd", "--yes", "@google/clasp@3", "mcp"],
       "enabled": true
     }
   }
@@ -95,8 +96,8 @@ args = ["-y", "@google/clasp", "mcp"]
 {
   "mcpServers": {
     "clasp": {
-      "command": "npx",
-      "args": ["-y", "@google/clasp", "mcp"]
+      "command": "npx.cmd",
+      "args": ["--yes", "@google/clasp@3", "mcp"]
     }
   }
 }
@@ -105,6 +106,8 @@ args = ["-y", "@google/clasp", "mcp"]
 改完按該區的 **Refresh**。
 
 > 註：以上是本機 stdio 形式，跟遠端 MCP 的鍵名規則不同——AntiGravity 只有**遠端**連線才必須用 `serverUrl`。
+
+> macOS／Linux：上述 MCP 設定把 `npx.cmd` 改成 `npx`，其餘參數不變。
 
 ---
 

@@ -27,22 +27,30 @@ license: MIT
 - 全程用**使用者的語言**，不要丟術語。
 - 需要他本人操作的地方（選帳號、點允許、去試算表確認），**停下來講清楚，等他回覆**。
 - Windows 一律用 PowerShell，**不要用 `&&` 串指令**（PowerShell 5.1 會語法錯誤），用 `;`。
+- 非 Windows 環境先讀 `references/platform-notes.md`，把本文的 Windows 命令前綴換成 POSIX 版本。
 
 ---
 
 ## 🔴 六條硬性紅線
 
-### 1. 一定要用個人 Google 帳號
+### 1. 預設建議個人 Google 帳號
 
-`clasp login` 時**主動提醒他選個人 Gmail，不要選學校或公司的 Workspace 帳號**。
+`clasp login` 時主動提醒：**個人 Gmail 是最簡單的預設選擇**。學校或公司的 Workspace 帳號可能受管理政策限制。
 
-受管理的 Workspace 帳號會回 `admin_policy_enforced`，那是**該網域的管理員才能解的**（要進 Admin Console 把 clasp 的 OAuth Client ID 加白名單）。使用者自己弄不了，不要讓他在那邊試。
+如果 Workspace 帳號回 `admin_policy_enforced`，不要無限重試。說明這通常需要管理員 allow-list clasp，或改用組織自己的內部 OAuth 專案；一般使用者無法自行解除網域政策。若使用者不需要組織帳號，建議改用個人 Gmail。
 
-### 2. 用 `npx`，不要全域安裝
+### 2. 固定 clasp v3，不要依賴全域安裝
 
-一律 `npx @google/clasp ...`。
+使用非互動安裝旗標並固定 v3 major，避免 npx 詢問與未來 major 升級破壞流程：
 
-理由：不用先安裝，而且**繞開 Windows 的執行原則限制**。使用者主動要求常用時，才建議 `npm install -g @google/clasp`，並準備處理執行原則。
+| 平台 | 命令前綴 |
+|---|---|
+| Windows PowerShell | `npx.cmd --yes @google/clasp@3` |
+| macOS／Linux | `npx --yes @google/clasp@3` |
+
+本文主流程以 Windows PowerShell 為例。非 Windows 只替換命令前綴，其餘 clasp 參數相同。
+
+理由：不用先全域安裝，並鎖住已驗證的 clasp 主版號。Windows 必須明確呼叫 `npx.cmd`；只寫 `npx` 可能先解析成 `npx.ps1`，仍被 PowerShell 執行原則阻擋。使用者主動要求常用時，才討論全域安裝。
 
 ### 3. 反覆失敗就提退路，不要無限重試
 
@@ -52,11 +60,11 @@ license: MIT
 
 **clasp 是效率升級，不是做出成品的必要條件。** 保住成品優先。
 
-### 4. 不要把可識別個資寫進雲端
+### 4. 預設不收集可識別個資
 
-試算表欄位**不要放真實姓名**，改用不具識別性的代號（編號、流水號等）。使用者提供的資料裡有姓名欄，**主動指出並建議移除**。
+試算表欄位預設使用不具識別性的代號（編號、流水號等）。使用者提供的資料裡有姓名或其他個資欄位時，主動指出風險並建議移除。
 
-也不要放身分證字號、電話、地址、家長聯絡方式。
+若業務確實需要姓名、電話或其他可識別資料，先說明網頁與試算表的存取範圍、資料保留方式與替代方案，取得使用者確認後才設計；身分證字號、地址、家長聯絡方式等高敏感資料預設不收集。
 
 理由很實際：網頁應用程式的網址通常會發給一群人，那是**公開網頁**；而試算表本身也可能被誤設成任何人可讀。
 
@@ -86,7 +94,7 @@ license: MIT
 ### 1. clasp 登入
 
 ```
-npx @google/clasp login
+npx.cmd --yes @google/clasp@3 login
 ```
 
 **執行前先講**：「等一下瀏覽器會打開，**請選你的個人 Gmail**，然後點允許。」
@@ -94,7 +102,7 @@ npx @google/clasp login
 ### 2. 驗證登入
 
 ```
-npx @google/clasp show-authorized-user --json
+npx.cmd --yes @google/clasp@3 show-authorized-user --json
 ```
 
 看到帳號 = 成功。**沒看到就不要往下做**，先照錯誤表處理。
@@ -107,9 +115,9 @@ npx @google/clasp show-authorized-user --json
 
 | 情境 | 指令 |
 |---|---|
-| 要**新建**一份試算表並綁定 | `npx @google/clasp create-script --type sheets --title "專案名"` |
-| 要綁到**現有**的試算表／文件／簡報 | `npx @google/clasp create-script --title "專案名" --parentId "<檔案ID>"` |
-| 不綁任何檔案（獨立腳本） | `npx @google/clasp create-script --type standalone --title "專案名"` |
+| 要**新建**一份試算表並綁定 | `npx.cmd --yes @google/clasp@3 create-script --type sheets --title "專案名"` |
+| 要綁到**現有**的試算表／文件／簡報 | `npx.cmd --yes @google/clasp@3 create-script --title "專案名" --parentId "<檔案ID>"` |
+| 不綁任何檔案（獨立腳本） | `npx.cmd --yes @google/clasp@3 create-script --type standalone --title "專案名"` |
 
 - `--parentId` 就是檔案網址中間那一段：`https://docs.google.com/spreadsheets/d/{這一段}/edit`
 - **有 `--parentId` 時 `--type` 會被忽略**。
@@ -120,7 +128,7 @@ npx @google/clasp show-authorized-user --json
 
 - 架構用**純 GAS ＋ `google.script.run` 同源溝通**，**不要**用 `fetch` 打自己的 `/exec`（會有 CORS 問題）。
 - `appsscript.json` 裡要有 `"webapp"` 設定才能部署成網頁應用程式。
-- `npx @google/clasp push` 推上去。
+- `npx.cmd --yes @google/clasp@3 push` 推上去。
 
 > 常見的起手式：一個 `Code.gs`（後端：讀寫試算表）＋ 一個 `index.html`（前端表單），
 > 使用者填表 → `google.script.run.saveData(...)` → 資料進試算表。
@@ -149,27 +157,35 @@ npx @google/clasp show-authorized-user --json
 #### 正確做法
 
 ```powershell
-npx @google/clasp create-deployment --description "第一版"
+npx.cmd --yes @google/clasp@3 create-deployment --description "第一版"
 ```
 
 從輸出取得 **deploymentId**，然後：
 
 ```powershell
-npx @google/clasp open-web-app <deploymentId> --json
+npx.cmd --yes @google/clasp@3 open-web-app <deploymentId> --json
 ```
 
 `--json` 是**全域旗標**，會把真正的網址印成 `{"url": "..."}` 給你讀。**用它印出來的網址，不要自己拼。**
 
-> - 拿不到 deploymentId 就先 `npx @google/clasp list-deployments`。
+> - 拿不到 deploymentId 就先 `npx.cmd --yes @google/clasp@3 list-deployments`。
 > - **一定要帶 deploymentId。** 不帶的話，clasp 只有在互動式終端機才會跳選單；在 agent 的非互動環境會直接報 `Deployment ID is required.`
 > - 這個指令除了印出網址，**也會順手把瀏覽器打開**，屬正常行為。
 > - 回 `No web app entry point found` → 這個部署不是網頁應用程式類型，回去確認 `appsscript.json` 的 `webapp` 設定。
 
-拿到正確網址之後，如果使用者要發給一群人，**順手產生 QR Code** 給他。
+#### 確認實際存取權限
+
+取得網址不代表其他人一定能開。clasp 建立部署後，仍要確認該部署的「執行身分」與「誰可以存取」符合使用情境：
+
+1. 執行 `npx.cmd --yes @google/clasp@3 open-script` 打開 Apps Script 編輯器。
+2. 到「部署 → 管理部署」檢查網頁應用程式設定；需要調整時由使用者在 Google UI 完成。
+3. 用無痕視窗或第二個非擁有者帳號開啟 `/exec` 網址實測。
+
+拿到正確網址並通過非擁有者測試後，如果使用者要發給一群人，再產生 QR Code。
 
 ⚠️ 首次部署會跳授權，**要先跟他說**：
 
-> 「會跳一個紅色警告說『Google 尚未驗證這個應用程式』。那是正常的——那支腳本就是你自己寫的。請點左下角『進階』→『前往〈你的專案名〉（不安全）』→ 允許。」
+先確認目前登入的 Google 帳號、專案名稱與 `script.google.com` 網域都正確，而且這確實是使用者自己建立或信任的腳本。只有確認來源後，才可引導「進階 → 前往〈專案名〉（不安全）→ 允許」；來源不明就停止，不要教使用者略過警告。
 
 ### 6. 請他實測
 
@@ -181,10 +197,10 @@ npx @google/clasp open-web-app <deploymentId> --json
 
 | 錯誤 | 意義 | 你要做的 |
 |---|---|---|
-| `admin_policy_enforced` | 用到受管理的 Workspace 帳號 | `npx @google/clasp logout`，重來並**強調選個人 Gmail** |
+| `admin_policy_enforced` | Workspace 網域限制 clasp OAuth | `npx.cmd --yes @google/clasp@3 logout`；可改用個人 Gmail，或請管理員 allow-list clasp／提供內部 OAuth 專案 |
 | `User has not enabled the Apps Script API` | 開關沒開或**還沒生效** | 給 <https://script.google.com/home/usersettings>，請他開，**等 1–2 分鐘**再重試 |
-| 「因為這個系統上已停用指令碼執行」 | Windows 執行原則 | 用 `npx` 而非全域安裝即可繞開；若已全域安裝，用 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned` |
-| 「Google 尚未驗證這個應用程式」 | 正常，自己的腳本 | 引導：進階 → 前往〈專案名〉（不安全）→ 允許 |
+| 「因為這個系統上已停用指令碼執行」 | PowerShell 呼叫到 `npx.ps1` | 改用 `npx.cmd --yes @google/clasp@3 ...`；不要為此修改全機執行原則 |
+| 「Google 尚未驗證這個應用程式」 | 腳本 OAuth 尚未驗證，來源仍需核對 | 先確認帳號、專案與 Google 網域；只有使用者自己建立或信任的腳本才引導進階授權 |
 | `node: 找不到指令` | 沒裝 Node | 回前置檢查 |
 | 指令名稱找不到 | **clasp v3 把指令全改名了**（見下方對照表） | 用 v3 的名字。舊教學與舊記憶都是 v2 的，照著下會先撞「指令不存在」然後開始亂試 |
 | **給出去的網址打開是「網頁不存在」** | 🔴 **拿 `scriptId` 去拼 `/macros/s/.../exec` 了。**網頁應用程式的網址只能跟 API 要 | `clasp open-web-app <deploymentId> --json`，用它印出來的網址（見步驟 5）|
@@ -214,7 +230,7 @@ npx @google/clasp open-web-app <deploymentId> --json
 clasp v3 內建一個 stdio 的 MCP server，可以讓 agent 直接用工具呼叫操作 Apps Script，而不是一直下 shell 指令。
 
 ```
-npx -y @google/clasp mcp
+npx.cmd --yes @google/clasp@3 mcp
 ```
 
 - 前提一樣：**先 `clasp login`、先開好 Apps Script API**，它用的是同一份憑證。
@@ -244,7 +260,7 @@ npx -y @google/clasp mcp
 
 ## 不要做的事
 
-- ❌ 不要用受管理的 Workspace 帳號登入
+- ❌ 不要在 Workspace 回 `admin_policy_enforced` 後無限重試或假裝使用者能自行解除網域政策
 - ❌ 不要在 `clasp login` 失敗時無限重試——兩次不過就提退路
 - ❌ 不要把真實姓名或其他個資寫進試算表或程式碼
 - ❌ 不要用 `fetch` 打自己的 `/exec`（用 `google.script.run`）
