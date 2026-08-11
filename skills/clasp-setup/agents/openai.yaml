@@ -1,0 +1,7 @@
+interface:
+  display_name: "clasp ＋ Apps Script 連線"
+  short_description: "讓 agent 讀得到、改得到、推得回你線上的 Apps Script 程式碼"
+  default_prompt: "使用 $clasp-setup 幫我把 Apps Script 接起來，並部署成網頁應用程式。"
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,16 @@
+# Google Drive 系統檔
+desktop.ini
+*.tmp
+~$*
+.DS_Store
+
+# 敏感資料
+.env
+*.key
+credentials.*
+.clasp.json
+.clasprc.json
+handoff.md
+
+# 依賴
+node_modules/
