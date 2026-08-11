@@ -25,6 +25,18 @@
 clasp-gas-skill/
 ├── .codex-plugin/
 │   └── plugin.json                 # Codex plugin manifest
+├── apps/
+│   └── student-grade-system/       # 實際部署中的 GAS 同源網頁範例
+│       ├── gas_code.js             # HTML Service 入口與 Sheets CRUD
+│       ├── index.html              # 前端主頁
+│       ├── style.html              # 內嵌樣式
+│       ├── app.html                # google.script.run 前端邏輯
+│       ├── appsscript.json         # GAS manifest
+│       ├── .claspignore            # 只推送上述 GAS 檔案
+│       ├── .clasp.json             # 本機連線資訊，不進 git
+│       ├── package.json
+│       ├── package-lock.json
+│       └── README.md
 ├── scripts/
 │   ├── install.ps1                 # Windows 安裝器
 │   ├── install.sh                  # macOS／Linux 安裝器
@@ -75,6 +87,14 @@ clasp-gas-skill/
 - 安裝必須可重複執行，不得產生 `clasp-setup/clasp-setup/` 巢狀目錄或留下已刪除的舊檔。
 - 安裝後用遞迴檔案清單與 SHA-256 驗證來源和目標一致。
 - 未經使用者明確要求，不覆蓋四個全域 Skill 副本；正式同步交給 `sync-skills`。
+
+### 實際 GAS 應用程式
+
+- `apps/student-grade-system/` 是正式應用程式的唯一原始碼位置；不要再依賴舊 `clasp-netlify-mcp-guide` repo。
+- 前端與後端皆由同一個 GAS Web App 提供；前端必須用 `google.script.run` 呼叫後端。
+- `.clasp.json` 只保留在本機並由 `.gitignore` 排除；GitHub 只保存可公開的程式碼與 placeholder 文件。
+- 刪除舊本機 repo 前，必須從本目錄通過 SHA-256、`show-file-status`、部署清單與瀏覽器載入驗證。
+- 刪除舊本機 repo 不等於刪除線上 Apps Script 或 Google Sheets；未經使用者明確要求，不得刪除線上專案、部署或試算表。
 
 ### 安全與隱私
 

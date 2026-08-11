@@ -6,6 +6,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path.TrimEnd('\', '/')
 $skillRoot = Join-Path $root 'skills\clasp-setup'
+$appRoot = Join-Path $root 'apps\student-grade-system'
 $errors = [Collections.Generic.List[string]]::new()
 
 function Add-ValidationError {
@@ -31,6 +32,15 @@ $required = @(
     'AGENTS.md',
     'CLAUDE.md',
     'README.md',
+    'apps\student-grade-system\.claspignore',
+    'apps\student-grade-system\app.html',
+    'apps\student-grade-system\appsscript.json',
+    'apps\student-grade-system\gas_code.js',
+    'apps\student-grade-system\index.html',
+    'apps\student-grade-system\package-lock.json',
+    'apps\student-grade-system\package.json',
+    'apps\student-grade-system\README.md',
+    'apps\student-grade-system\style.html',
     'scripts\install.ps1',
     'scripts\install.sh',
     'skills\clasp-setup\SKILL.md',
@@ -42,6 +52,26 @@ foreach ($relative in $required) {
     if (-not (Test-Path -LiteralPath (Join-Path $root $relative) -PathType Leaf)) {
         Add-ValidationError "缺少必要檔案：$relative"
     }
+}
+
+$appClaspIgnore = Get-Content -LiteralPath (Join-Path $appRoot '.claspignore') -Raw -Encoding UTF8
+foreach ($entry in @('!gas_code.js', '!index.html', '!style.html', '!app.html', '!appsscript.json')) {
+    if (-not $appClaspIgnore.Contains($entry)) {
+        Add-ValidationError "應用程式 .claspignore 缺少：$entry"
+    }
+}
+
+$appBackend = Get-Content -LiteralPath (Join-Path $appRoot 'gas_code.js') -Raw -Encoding UTF8
+$appFrontend = Get-Content -LiteralPath (Join-Path $appRoot 'app.html') -Raw -Encoding UTF8
+$appIndex = Get-Content -LiteralPath (Join-Path $appRoot 'index.html') -Raw -Encoding UTF8
+if (-not $appBackend.Contains('HtmlService.createTemplateFromFile')) {
+    Add-ValidationError '應用程式後端缺少 GAS HTML Service 入口。'
+}
+if (-not $appFrontend.Contains('google.script.run') -or $appFrontend.Contains('GAS_API_URL')) {
+    Add-ValidationError '應用程式前端必須使用 google.script.run，且不可硬編碼 GAS_API_URL。'
+}
+if (-not $appIndex.Contains("include('style')") -or -not $appIndex.Contains("include('app')")) {
+    Add-ValidationError '應用程式 index.html 未完整內嵌 style/app。'
 }
 
 $skillFile = Join-Path $skillRoot 'SKILL.md'
@@ -99,6 +129,7 @@ $textNames = @('.gitattributes', '.gitignore')
 $textExtensions = @('.md', '.ps1', '.sh', '.json', '.yaml', '.yml')
 foreach ($file in Get-ChildItem -LiteralPath $root -Recurse -File -Force | Where-Object {
         $_.FullName -notmatch '[\\/]\.git[\\/]' -and
+        $_.Name -notin @('.clasp.json', '.clasprc.json') -and
         ($textNames -contains $_.Name -or $textExtensions -contains $_.Extension.ToLowerInvariant())
     }) {
     $bytes = [IO.File]::ReadAllBytes($file.FullName)
@@ -119,13 +150,22 @@ $secretPatterns = @(
     '-----BEGIN [A-Z ]*PRIVATE KEY-----'
 )
 foreach ($file in Get-ChildItem -LiteralPath $root -Recurse -File -Force | Where-Object {
-        $_.FullName -notmatch '[\\/]\.git[\\/]'
+        $_.FullName -notmatch '[\\/]\.git[\\/]' -and
+        $_.Name -notin @('.clasp.json', '.clasprc.json')
     }) {
     $text = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
     foreach ($pattern in $secretPatterns) {
         if ($text -match $pattern) {
             Add-ValidationError "疑似敏感資訊：$($file.FullName.Substring($root.Length + 1))（$pattern）"
         }
+    }
+}
+
+foreach ($localClasp in Get-ChildItem -LiteralPath $root -Recurse -File -Force -Filter '.clasp.json') {
+    $relativeClasp = $localClasp.FullName.Substring($root.Length + 1)
+    & git -C $root check-ignore --quiet -- $relativeClasp
+    if ($LASTEXITCODE -ne 0) {
+        Add-ValidationError "本機 clasp 連線檔未被 git 忽略：$relativeClasp"
     }
 }
 

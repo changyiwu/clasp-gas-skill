@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>卓越學生成績管理系統 - Academic Grade Management System</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <!-- GAS HTML Service 內嵌樣式 -->
+  <?!= include('style'); ?>
+</head>
+<body>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="logo-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+        <div class="logo-text">
+          <h1>卓越學生成績管理系統</h1>
+          <p>Academic Grade Management System</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-indicator online"></span>
+        <span class="status-text">雲端資料庫已連線 (Google Sheets)</span>
+      </div>
+    </header>
+
+    <!-- Stats Dashboard Row -->
+    <section class="stats-dashboard">
+      <div class="stat-card">
+        <div class="stat-icon purple"><i class="fa-solid fa-users"></i></div>
+        <div class="stat-info">
+          <h3>學生總人數</h3>
+          <p id="stat-total-students">-</p>
+        </div>
+        <div class="stat-bg-glow"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon cyan"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="stat-info">
+          <h3>全級平均成績</h3>
+          <p id="stat-average-grade">-</p>
+        </div>
+        <div class="stat-bg-glow"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon emerald"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="stat-info">
+          <h3>合格率 (≥60分)</h3>
+          <p id="stat-pass-rate">-</p>
+        </div>
+        <div class="stat-bg-glow"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon rose"><i class="fa-solid fa-award"></i></div>
+        <div class="stat-info">
+          <h3>班級最高分</h3>
+          <p id="stat-top-student">-</p>
+        </div>
+        <div class="stat-bg-glow"></div>
+      </div>
+    </section>
+
+    <!-- Main Workspace -->
+    <main class="main-workspace">
+
+      <!-- Left Column: Form Section -->
+      <section class="form-section glass-panel">
+        <div class="panel-header">
+          <h2 id="form-title"><i class="fa-solid fa-user-plus"></i> 新增學生成績</h2>
+          <p class="panel-subtitle">請輸入學生基本資料與學科成績</p>
+        </div>
+
+        <form id="student-form" class="student-form">
+          <div class="form-group-row">
+            <div class="form-group">
+              <label for="student-id"><i class="fa-solid fa-id-card"></i> 學號</label>
+              <input type="text" id="student-id" placeholder="例如: S112001" required>
+            </div>
+            <div class="form-group">
+              <label for="student-name"><i class="fa-solid fa-user"></i> 姓名</label>
+              <input type="text" id="student-name" placeholder="例如: 王小明" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="student-class"><i class="fa-solid fa-users-rectangle"></i> 班級</label>
+            <select id="student-class" required>
+              <option value="" disabled selected>選擇班級</option>
+              <option value="一年甲班">一年甲班</option>
+              <option value="一年乙班">一年乙班</option>
+              <option value="二年甲班">二年甲班</option>
+              <option value="二年乙班">二年乙班</option>
+            </select>
+          </div>
+
+          <div class="grades-grid-title"><i class="fa-solid fa-square-poll-vertical"></i> 學科分數 (0 - 100)</div>
+
+          <div class="grades-form-grid">
+            <div class="form-group">
+              <label for="grade-math">數學</label>
+              <input type="number" id="grade-math" min="0" max="100" placeholder="分數" required>
+            </div>
+            <div class="form-group">
+              <label for="grade-english">英文</label>
+              <input type="number" id="grade-english" min="0" max="100" placeholder="分數" required>
+            </div>
+            <div class="form-group">
+              <label for="grade-science">自然</label>
+              <input type="number" id="grade-science" min="0" max="100" placeholder="分數" required>
+            </div>
+            <div class="form-group">
+              <label for="grade-history">歷史</label>
+              <input type="number" id="grade-history" min="0" max="100" placeholder="分數" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="student-notes"><i class="fa-solid fa-pen"></i> 備註事項</label>
+            <textarea id="student-notes" placeholder="其他備註資訊 (非必填)" rows="3"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-cancel" class="btn btn-secondary hidden">取消修改</button>
+            <button type="submit" id="btn-submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> 儲存送出</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: List and Table Section -->
+      <section class="list-section glass-panel">
+        <div class="panel-header search-filter-header">
+          <h2><i class="fa-solid fa-list-check"></i> 學生資料清單</h2>
+
+          <!-- Search & Filter Controls -->
+          <div class="filter-controls">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input type="text" id="search-input" placeholder="搜尋姓名或學號...">
+            </div>
+
+            <div class="select-wrapper">
+              <select id="filter-class">
+                <option value="all">所有班級</option>
+                <option value="一年甲班">一年甲班</option>
+                <option value="一年乙班">一年乙班</option>
+                <option value="二年甲班">二年甲班</option>
+                <option value="二年乙班">二年乙班</option>
+              </select>
+            </div>
+
+            <div class="select-wrapper">
+              <select id="filter-status">
+                <option value="all">所有狀態</option>
+                <option value="及格">及格 (≥60)</option>
+                <option value="不及格">不及格 (<60)</option>
+              </select>
+            </div>
+
+            <button id="btn-refresh" class="btn btn-icon-only" title="重新整理資料"><i class="fa-solid fa-rotate"></i></button>
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="table-container">
+          <table class="grades-table" id="grades-table">
+            <thead>
+              <tr>
+                <th>學號</th>
+                <th>姓名</th>
+                <th>班級</th>
+                <th>數學</th>
+                <th>英文</th>
+                <th>自然</th>
+                <th>歷史</th>
+                <th>平均</th>
+                <th>狀態</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- Loading Skeleton will be inserted here dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Visualizations / Charts Section -->
+    <section class="visualizations-section glass-panel">
+      <div class="panel-header">
+        <h2><i class="fa-solid fa-chart-pie"></i> 成績統計與多維分析圖表</h2>
+        <p class="panel-subtitle">即時更新學科平均值雷達圖與班級平均比較</p>
+      </div>
+      <div class="charts-wrapper">
+        <div class="chart-container">
+          <canvas id="radarChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="barChart"></canvas>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- GAS HTML Service 內嵌前端程式 -->
+  <?!= include('app'); ?>
+</body>
+</html>

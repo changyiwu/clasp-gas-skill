@@ -1,0 +1,506 @@
+<script>
+// 學生成績管理系統 - GAS 同源前端與 UI 互動邏輯
+
+function callServer(functionName, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(error => {
+        reject(new Error(error && error.message ? error.message : String(error)));
+      })[functionName](...args);
+  });
+}
+
+// 全局狀態
+let studentsData = [];
+let editingId = null;
+let radarChartInstance = null;
+let barChartInstance = null;
+
+// DOM 元素
+const studentForm = document.getElementById("student-form");
+const formTitle = document.getElementById("form-title");
+const btnSubmit = document.getElementById("btn-submit");
+const btnCancel = document.getElementById("btn-cancel");
+const tableBody = document.getElementById("table-body");
+const searchInput = document.getElementById("search-input");
+const filterClass = document.getElementById("filter-class");
+const filterStatus = document.getElementById("filter-status");
+const btnRefresh = document.getElementById("btn-refresh");
+
+// 欄位 DOM
+const inputId = document.getElementById("student-id");
+const inputName = document.getElementById("student-name");
+const inputClass = document.getElementById("student-class");
+const inputMath = document.getElementById("grade-math");
+const inputEnglish = document.getElementById("grade-english");
+const inputScience = document.getElementById("grade-science");
+const inputHistory = document.getElementById("grade-history");
+const inputNotes = document.getElementById("student-notes");
+
+// 統計面板 DOM
+const statTotalStudents = document.getElementById("stat-total-students");
+const statAverageGrade = document.getElementById("stat-average-grade");
+const statPassRate = document.getElementById("stat-pass-rate");
+const statTopStudent = document.getElementById("stat-top-student");
+
+// 初始化事件監聽
+document.addEventListener("DOMContentLoaded", () => {
+  fetchStudents();
+
+  // 表單送出
+  studentForm.addEventListener("submit", submitForm);
+
+  // 取消編輯
+  btnCancel.addEventListener("click", resetFormMode);
+
+  // 搜尋與篩選事件
+  searchInput.addEventListener("input", filterAndRenderTable);
+  filterClass.addEventListener("change", filterAndRenderTable);
+  filterStatus.addEventListener("change", filterAndRenderTable);
+
+  // 重新整理
+  btnRefresh.addEventListener("click", fetchStudents);
+});
+
+// Toast 提示訊息
+function showToast(message, type = "info") {
+  const container = document.getElementById("toast-container");
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+
+  let icon = "fa-info-circle";
+  if (type === "success") icon = "fa-check-circle";
+  if (type === "error") icon = "fa-exclamation-circle";
+
+  const iconElement = document.createElement("i");
+  iconElement.className = `fa-solid ${icon}`;
+  const contentElement = document.createElement("div");
+  contentElement.className = "toast-content";
+  contentElement.textContent = message;
+  toast.append(iconElement, contentElement);
+
+  container.appendChild(toast);
+
+  // Trigger animation
+  setTimeout(() => toast.classList.add("show"), 10);
+
+  // Remove toast
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+// 顯示 Table 骨架屏 (Loading 狀態)
+function showSkeletonLoader() {
+  tableBody.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const row = document.createElement("tr");
+    row.className = "skeleton-row";
+    row.innerHTML = `
+      <td><div class="skeleton-line short"></div></td>
+      <td><div class="skeleton-line medium"></div></td>
+      <td><div class="skeleton-line short"></div></td>
+      <td><div class="skeleton-line short"></div></td>
+      <td><div class="skeleton-line short"></div></td>
+      <td><div class="skeleton-line short"></div></td>
+      <td><div class="skeleton-line short"></div></td>
+      <td><div class="skeleton-line short"></div></td>
+      <td><div class="skeleton-line short"></div></td>
+      <td><div class="skeleton-line medium"></div></td>
+    `;
+    tableBody.appendChild(row);
+  }
+}
+
+// 從同一個 GAS Web App 後端獲取資料
+async function fetchStudents() {
+  showSkeletonLoader();
+  try {
+    const result = await callServer("getStudents");
+    if (result.success) {
+      studentsData = result.data || [];
+      filterAndRenderTable();
+      calculateStats();
+      updateCharts();
+      showToast("學生資料同步成功！", "success");
+    } else {
+      throw new Error(result.error || "讀取資料庫失敗");
+    }
+  } catch (error) {
+    console.error(error);
+    showToast(`讀取資料失敗: ${error.message}`, "error");
+    tableBody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--status-fail);">資料載入失敗，請確認是否已在 Apps Script 完成首次執行授權。</td></tr>`;
+  }
+}
+
+// 篩選與渲染表格
+function filterAndRenderTable() {
+  const query = searchInput.value.toLowerCase().trim();
+  const selectedClass = filterClass.value;
+  const selectedStatus = filterStatus.value;
+
+  const filtered = studentsData.filter(student => {
+    // 搜尋過濾
+    const matchQuery =
+      student.StudentID.toString().toLowerCase().includes(query) ||
+      student.Name.toLowerCase().includes(query);
+
+    // 班級過濾
+    const matchClass = selectedClass === "all" || student.Class === selectedClass;
+
+    // 及格狀態過濾
+    const matchStatus = selectedStatus === "all" || student.Status === selectedStatus;
+
+    return matchQuery && matchClass && matchStatus;
+  });
+
+  renderTable(filtered);
+}
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+// 渲染表格內容
+function renderTable(data) {
+  tableBody.innerHTML = "";
+  if (data.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">無符合條件的學生資料。</td></tr>`;
+    return;
+  }
+
+  data.forEach(student => {
+    const row = document.createElement("tr");
+    const isPass = student.Status === "及格";
+    const statusClass = isPass ? "badge-pass" : "badge-fail";
+    const avgScoreClass = isPass ? "pass" : "fail";
+
+    // 確保成績數值正確格式化
+    const math = Number(student.Math).toFixed(0);
+    const english = Number(student.English).toFixed(0);
+    const science = Number(student.Science).toFixed(0);
+    const history = Number(student.History).toFixed(0);
+    const avg = Number(student.Average).toFixed(1);
+
+    row.innerHTML = `
+      <td>${escapeHtml(student.StudentID)}</td>
+      <td><strong>${escapeHtml(student.Name)}</strong></td>
+      <td>${escapeHtml(student.Class)}</td>
+      <td>${math}</td>
+      <td>${english}</td>
+      <td>${science}</td>
+      <td>${history}</td>
+      <td class="average-score ${avgScoreClass}">${avg}</td>
+      <td><span class="badge ${statusClass}">${student.Status}</span></td>
+      <td>
+        <div class="action-buttons">
+          <button class="btn-action btn-action-edit" onclick="editStudent('${student.ID}')" title="編輯"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="btn-action btn-action-delete" onclick="deleteStudent('${student.ID}')" title="刪除"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </td>
+    `;
+    tableBody.appendChild(row);
+  });
+}
+
+// 計算與更新統計面板
+function calculateStats() {
+  if (studentsData.length === 0) {
+    statTotalStudents.textContent = "0";
+    statAverageGrade.textContent = "-";
+    statPassRate.textContent = "-";
+    statTopStudent.textContent = "-";
+    return;
+  }
+
+  const total = studentsData.length;
+  let totalSum = 0;
+  let passCount = 0;
+  let topStudentName = "-";
+  let topScore = -1;
+
+  studentsData.forEach(student => {
+    const avg = Number(student.Average);
+    totalSum += avg;
+    if (student.Status === "及格") passCount++;
+    if (avg > topScore) {
+      topScore = avg;
+      topStudentName = `${student.Name} (${avg.toFixed(1)}分)`;
+    }
+  });
+
+  const classAvg = totalSum / total;
+  const passRate = (passCount / total) * 100;
+
+  statTotalStudents.textContent = `${total} 人`;
+  statAverageGrade.textContent = `${classAvg.toFixed(1)} 分`;
+  statPassRate.textContent = `${passRate.toFixed(0)} %`;
+  statTopStudent.textContent = topStudentName;
+}
+
+// 提交表單（新增或修改）
+async function submitForm(e) {
+  e.preventDefault();
+
+  const payloadData = {
+    StudentID: inputId.value.trim(),
+    Name: inputName.value.trim(),
+    Class: inputClass.value,
+    Math: parseFloat(inputMath.value),
+    English: parseFloat(inputEnglish.value),
+    Science: parseFloat(inputScience.value),
+    History: parseFloat(inputHistory.value),
+    Notes: inputNotes.value.trim()
+  };
+
+  // 驗證成績範圍
+  const scores = [payloadData.Math, payloadData.English, payloadData.Science, payloadData.History];
+  if (scores.some(score => isNaN(score) || score < 0 || score > 100)) {
+    showToast("成績必須介於 0 至 100 之間！", "error");
+    return;
+  }
+
+  // 檢查是否是修改模式且包含 ID
+  if (editingId) {
+    payloadData.ID = editingId;
+  }
+
+  // 禁用送出按鈕
+  btnSubmit.disabled = true;
+  btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 處理中...`;
+
+  try {
+    const result = await callServer("saveStudent", payloadData);
+
+    if (result.success) {
+      showToast(editingId ? "學生成績修改成功！" : "學生成績新增成功！", "success");
+      resetFormMode();
+      await fetchStudents();
+    } else {
+      throw new Error(result.error || "儲存失敗");
+    }
+  } catch (error) {
+    console.error(error);
+    showToast(`儲存失敗: ${error.message}`, "error");
+  } finally {
+    btnSubmit.disabled = false;
+    btnSubmit.innerHTML = editingId ? `<i class="fa-solid fa-check"></i> 確認修改` : `<i class="fa-solid fa-paper-plane"></i> 儲存送出`;
+  }
+}
+
+// 進入編輯狀態
+window.editStudent = function(id) {
+  const student = studentsData.find(s => s.ID === id);
+  if (!student) return;
+
+  editingId = id;
+
+  // 填寫表單
+  inputId.value = student.StudentID;
+  inputName.value = student.Name;
+  inputClass.value = student.Class;
+  inputMath.value = student.Math;
+  inputEnglish.value = student.English;
+  inputScience.value = student.Science;
+  inputHistory.value = student.History;
+  inputNotes.value = student.Notes || "";
+
+  // 更新 UI 模式
+  formTitle.innerHTML = `<i class="fa-solid fa-user-pen"></i> 修改學生成績`;
+  btnSubmit.innerHTML = `<i class="fa-solid fa-check"></i> 確認修改`;
+  btnCancel.classList.remove("hidden");
+
+  // 捲動至表單位置
+  document.querySelector(".form-section").scrollIntoView({ behavior: "smooth" });
+};
+
+// 刪除學生資料
+window.deleteStudent = function(id) {
+  const student = studentsData.find(s => s.ID === id);
+  if (!student) return;
+
+  if (!confirm(`確認要刪除學生【${student.Name}】(學號: ${student.StudentID}) 的成績記錄嗎？`)) {
+    return;
+  }
+
+  performDelete(id);
+};
+
+async function performDelete(id) {
+  showToast("正在刪除資料...", "info");
+
+  try {
+    const result = await callServer("deleteStudent", id);
+
+    if (result.success) {
+      showToast("資料刪除成功！", "success");
+      if (editingId === id) resetFormMode();
+      await fetchStudents();
+    } else {
+      throw new Error(result.error || "刪除失敗");
+    }
+  } catch (error) {
+    console.error(error);
+    showToast(`刪除失敗: ${error.message}`, "error");
+  }
+}
+
+// 重設表單狀態
+function resetFormMode() {
+  editingId = null;
+  studentForm.reset();
+
+  // 還原 UI 模式
+  formTitle.innerHTML = `<i class="fa-solid fa-user-plus"></i> 新增學生成績`;
+  btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> 儲存送出`;
+  btnCancel.classList.add("hidden");
+}
+
+// 初始化與更新統計圖表
+function updateCharts() {
+  updateRadarChart();
+  updateBarChart();
+}
+
+// 1. 各科平均分數雷達圖 (Radar Chart)
+function updateRadarChart() {
+  const ctx = document.getElementById("radarChart").getContext("2d");
+
+  // 計算學科平均
+  let sumMath = 0, sumEnglish = 0, sumScience = 0, sumHistory = 0;
+  const count = studentsData.length;
+
+  if (count > 0) {
+    studentsData.forEach(s => {
+      sumMath += Number(s.Math);
+      sumEnglish += Number(s.English);
+      sumScience += Number(s.Science);
+      sumHistory += Number(s.History);
+    });
+    sumMath /= count;
+    sumEnglish /= count;
+    sumScience /= count;
+    sumHistory /= count;
+  }
+
+  const chartData = [sumMath, sumEnglish, sumScience, sumHistory];
+
+  if (radarChartInstance) {
+    radarChartInstance.data.datasets[0].data = chartData;
+    radarChartInstance.update();
+  } else {
+    radarChartInstance = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['數學', '英文', '自然', '歷史'],
+        datasets: [{
+          label: '全體學科平均分數',
+          data: chartData,
+          fill: true,
+          backgroundColor: 'rgba(139, 92, 246, 0.2)',
+          borderColor: '#8b5cf6',
+          pointBackgroundColor: '#8b5cf6',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: '#8b5cf6'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: { color: '#f8fafc', font: { family: 'Outfit, Noto Sans TC' } }
+          }
+        },
+        scales: {
+          r: {
+            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+            pointLabels: { color: '#94a3b8', font: { family: 'Outfit, Noto Sans TC', size: 12 } },
+            suggestedMin: 0,
+            suggestedMax: 100,
+            ticks: {
+              color: '#64748b',
+              backdropColor: 'transparent',
+              stepSize: 20
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+// 2. 班級平均分數條形圖 (Bar Chart)
+function updateBarChart() {
+  const ctx = document.getElementById("barChart").getContext("2d");
+
+  // 計算各班平均
+  const classes = ["一年甲班", "一年乙班", "二年甲班", "二年乙班"];
+  const classAverages = classes.map(cls => {
+    const list = studentsData.filter(s => s.Class === cls);
+    if (list.length === 0) return 0;
+    const sum = list.reduce((acc, curr) => acc + Number(curr.Average), 0);
+    return sum / list.length;
+  });
+
+  if (barChartInstance) {
+    barChartInstance.data.datasets[0].data = classAverages;
+    barChartInstance.update();
+  } else {
+    barChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: classes,
+        datasets: [{
+          label: '班級平均分數',
+          data: classAverages,
+          backgroundColor: [
+            'rgba(6, 182, 212, 0.6)',
+            'rgba(139, 92, 246, 0.6)',
+            'rgba(16, 185, 129, 0.6)',
+            'rgba(244, 63, 94, 0.6)'
+          ],
+          borderColor: [
+            '#06b6d4',
+            '#8b5cf6',
+            '#10b981',
+            '#f43f5e'
+          ],
+          borderWidth: 1,
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8', font: { family: 'Outfit, Noto Sans TC' } }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#94a3b8', font: { family: 'Outfit, Noto Sans TC' } },
+            suggestedMin: 0,
+            suggestedMax: 100
+          }
+        }
+      }
+    });
+  }
+}
+</script>

@@ -110,6 +110,8 @@ bash ./clasp-gas-skill/scripts/install.sh
 clasp-gas-skill/
 ├── .codex-plugin/
 │   └── plugin.json
+├── apps/
+│   └── student-grade-system/       ← 已部署的 GAS 同源前後端完整原始碼
 ├── skills/
 │   └── clasp-setup/
 │       ├── SKILL.md                     ← 技能本體
@@ -128,6 +130,21 @@ clasp-gas-skill/
 └── README.md
 ```
 
+## 完整實作範例
+
+`apps/student-grade-system/` 保存一套已實際部署的學生成績管理 Web App。HTML、CSS、瀏覽器端 JavaScript、Apps Script 後端與 manifest 都在同一個資料夾，前端以 `google.script.run` 同源呼叫後端，不依賴 Netlify 或舊 repo。
+
+Windows PowerShell 從該資料夾維護線上專案：
+
+```powershell
+cd .\apps\student-grade-system
+npx.cmd --yes @google/clasp@3 show-authorized-user --json
+npx.cmd --yes @google/clasp@3 show-file-status
+npx.cmd --yes @google/clasp@3 push
+```
+
+本機 `.clasp.json` 保存既有 GAS 連線但不進 Git；從 GitHub 重新 clone 時，必須自行重新連結有權限的 Apps Script 專案。
+
 ## 相容性說明
 
 - 對照 **clasp v3** 撰寫並逐條核對過官方 README 與原始碼（含 `open-web-app` 的 `entryPoints` 行為）。
@@ -136,10 +153,10 @@ clasp-gas-skill/
 
 ## 驗證
 
-Windows 可在 repo 根目錄執行：
+Windows 可在 repo 根目錄以 PowerShell 7 執行：
 
 ```powershell
-.\scripts\validate.ps1
+pwsh -NoProfile -File .\scripts\validate.ps1
 ```
 
 驗證器會檢查 Skill／plugin 基本結構、四平台文件路徑、UTF-8 BOM、敏感資訊樣式，並在系統暫存目錄模擬四個全域根目錄、連續安裝兩次，確認來源與四個副本的 SHA-256 完全一致。
