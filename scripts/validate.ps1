@@ -185,20 +185,21 @@ try {
         New-Item -ItemType Directory -Path (Join-Path $fakeUserProfile $relativeBase) -Force | Out-Null
     }
 
-    $originalUserProfile = $env:USERPROFILE
+    # 覆寫 install.ps1 的家目錄接縫（不能覆寫 $HOME：作用域傳不進子 scope）
+    $originalSkillHome = $env:CLASP_SKILL_HOME
     try {
-        $env:USERPROFILE = $fakeUserProfile
-        & (Join-Path $root 'scripts\install.ps1') *> $null
+        $env:CLASP_SKILL_HOME = $fakeUserProfile
+        & (Join-Path $root 'scripts' 'install.ps1') *> $null
         foreach ($relativeBase in $relativeBases) {
             $staleFile = Join-Path $fakeUserProfile (Join-Path $relativeBase 'clasp-setup\stale-from-previous-version.txt')
             [IO.File]::WriteAllText($staleFile, 'stale', [Text.UTF8Encoding]::new($false))
         }
-        & (Join-Path $root 'scripts\install.ps1') *> $null
+        & (Join-Path $root 'scripts' 'install.ps1') *> $null
     } finally {
-        if ($null -eq $originalUserProfile) {
-            Remove-Item Env:USERPROFILE -ErrorAction SilentlyContinue
+        if ($null -eq $originalSkillHome) {
+            Remove-Item Env:CLASP_SKILL_HOME -ErrorAction SilentlyContinue
         } else {
-            $env:USERPROFILE = $originalUserProfile
+            $env:CLASP_SKILL_HOME = $originalSkillHome
         }
     }
 

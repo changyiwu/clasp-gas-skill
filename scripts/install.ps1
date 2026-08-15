@@ -62,15 +62,19 @@ function Get-HashMap {
     $map
 }
 
-if (-not $env:USERPROFILE) {
-    throw '找不到 USERPROFILE，無法決定全域安裝位置。'
+# 用 $HOME 而不是 $env:USERPROFILE：後者在 macOS 是空字串，而且不報錯。
+# CLASP_SKILL_HOME 是給 validate.ps1 隔離測試用的覆寫接縫——$HOME 的作用域覆寫
+# 傳不進子 scope，不能像以前覆寫 USERPROFILE 那樣做。
+$homeDir = if ($env:CLASP_SKILL_HOME) { $env:CLASP_SKILL_HOME } else { $HOME }
+if (-not $homeDir) {
+    throw '找不到家目錄，無法決定全域安裝位置。'
 }
 
 $destinations = [ordered]@{
-    'Claude Code' = Join-Path $env:USERPROFILE '.claude\skills'
-    'Codex' = Join-Path $env:USERPROFILE '.agents\skills'
-    'OpenCode' = Join-Path $env:USERPROFILE '.config\opencode\skills'
-    'Antigravity' = Join-Path $env:USERPROFILE '.gemini\config\skills'
+    'Claude Code' = Join-Path $homeDir '.claude' 'skills'
+    'Codex' = Join-Path $homeDir '.agents' 'skills'
+    'OpenCode' = Join-Path $homeDir '.config' 'opencode' 'skills'
+    'Antigravity' = Join-Path $homeDir '.gemini' 'config' 'skills'
 }
 
 $sourceFiles = Get-InstallFiles -Base $source
