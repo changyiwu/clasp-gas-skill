@@ -142,3 +142,4 @@ clasp-gas-skill/
 - 所有回應與文件使用繁體中文。
 - 修改前先確認計畫，優先保留原有資料結構。
 - 使用 `apply_patch` 編輯 repo 檔案；不要用 shell 重建檔案內容。
+- **`install.ps1`（Windows）與 `install.sh`（macOS／Linux，給沒裝 pwsh 的外部使用者）是雙軌實作，有漂移風險**。改任一支就要同步檢查另一支，不可只改一邊。
