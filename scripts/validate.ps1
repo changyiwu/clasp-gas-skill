@@ -41,6 +41,7 @@ $required = @(
     'apps\student-grade-system\package.json',
     'apps\student-grade-system\README.md',
     'apps\student-grade-system\style.html',
+    'scripts\install.mjs',
     'scripts\install.ps1',
     'scripts\install.sh',
     'skills\clasp-setup\SKILL.md',
@@ -126,7 +127,7 @@ foreach ($path in @('.claude/skills', '.agents/skills', '.config/opencode/skills
 
 $strictUtf8 = [Text.UTF8Encoding]::new($false, $true)
 $textNames = @('.gitattributes', '.gitignore')
-$textExtensions = @('.md', '.ps1', '.sh', '.json', '.yaml', '.yml')
+$textExtensions = @('.md', '.ps1', '.sh', '.mjs', '.js', '.json', '.yaml', '.yml')
 foreach ($file in Get-ChildItem -LiteralPath $root -Recurse -File -Force | Where-Object {
         $_.FullName -notmatch '[\\/]\.git[\\/]' -and
         $_.Name -notin @('.clasp.json', '.clasprc.json') -and
@@ -169,6 +170,39 @@ foreach ($localClasp in Get-ChildItem -LiteralPath $root -Recurse -File -Force -
     }
 }
 
+# 雙軌漂移守門：安裝邏輯只能有一份（install.mjs），.ps1／.sh 必須是純轉呼叫殼層。
+# 只要有人把複製、排除、雜湊或安裝路徑判斷寫回殼層，這裡就會失敗。
+$installerCore = Join-Path $root 'scripts\install.mjs'
+$installerCoreText = Get-Content -LiteralPath $installerCore -Raw -Encoding UTF8
+foreach ($marker in @('.claude', '.agents', 'opencode', '.gemini', 'sha256', 'CLASP_SKILL_HOME')) {
+    if (-not $installerCoreText.Contains($marker)) {
+        Add-ValidationError "安裝器核心缺少必要邏輯標記：$marker"
+    }
+}
+
+$forbiddenInWrapper = @(
+    '.claude', '.agents', 'opencode', '.gemini',
+    'sha256', 'SHA256', 'node_modules', '__pycache__',
+    'Copy-Item', 'Remove-Item', 'Get-FileHash', 'cp -R', 'rm -rf'
+)
+foreach ($wrapper in @('scripts\install.ps1', 'scripts\install.sh')) {
+    $wrapperPath = Join-Path $root $wrapper
+    $wrapperText = Get-Content -LiteralPath $wrapperPath -Raw -Encoding UTF8
+    $wrapperLines = @(Get-Content -LiteralPath $wrapperPath -Encoding UTF8).Count
+
+    if (-not $wrapperText.Contains('install.mjs')) {
+        Add-ValidationError "安裝殼層未轉呼叫 install.mjs：$wrapper"
+    }
+    if ($wrapperLines -gt 30) {
+        Add-ValidationError "安裝殼層過長（$wrapperLines 行），疑似寫回安裝邏輯：$wrapper"
+    }
+    foreach ($marker in $forbiddenInWrapper) {
+        if ($wrapperText.Contains($marker)) {
+            Add-ValidationError "安裝殼層含有應只存在於 install.mjs 的邏輯（$marker）：$wrapper"
+        }
+    }
+}
+
 $tempRoot = [IO.Path]::Combine([IO.Path]::GetTempPath(), 'clasp-gas-skill-validate-' + [Guid]::NewGuid().ToString('N'))
 $resolvedTemp = [IO.Path]::GetFullPath($tempRoot)
 $allowedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
@@ -187,15 +221,32 @@ try {
 
     # 覆寫 install.ps1 的家目錄接縫（不能覆寫 $HOME：作用域傳不進子 scope）
     $originalSkillHome = $env:CLASP_SKILL_HOME
+    $excludedDir = Join-Path $skillRoot 'node_modules'
     try {
         $env:CLASP_SKILL_HOME = $fakeUserProfile
+
+        # 第一次安裝：來源刻意放一個應被排除的目錄，確認它不會被裝進目標。
+        New-Item -ItemType Directory -Path $excludedDir -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $excludedDir 'junk.txt'), 'junk', [Text.UTF8Encoding]::new($false))
         & (Join-Path $root 'scripts' 'install.ps1') *> $null
+        foreach ($relativeBase in $relativeBases) {
+            $target = Join-Path $fakeUserProfile (Join-Path $relativeBase 'clasp-setup')
+            if (Test-Path -LiteralPath (Join-Path $target 'node_modules')) {
+                Add-ValidationError "排除清單未生效，安裝了 node_modules：$relativeBase\clasp-setup"
+            }
+        }
+        Remove-Item -LiteralPath $excludedDir -Recurse -Force
+
+        # 第二次安裝：目標刻意留下舊版殘檔，確認更新會清掉它。
         foreach ($relativeBase in $relativeBases) {
             $staleFile = Join-Path $fakeUserProfile (Join-Path $relativeBase 'clasp-setup\stale-from-previous-version.txt')
             [IO.File]::WriteAllText($staleFile, 'stale', [Text.UTF8Encoding]::new($false))
         }
         & (Join-Path $root 'scripts' 'install.ps1') *> $null
     } finally {
+        if (Test-Path -LiteralPath $excludedDir) {
+            Remove-Item -LiteralPath $excludedDir -Recurse -Force
+        }
         if ($null -eq $originalSkillHome) {
             Remove-Item Env:CLASP_SKILL_HOME -ErrorAction SilentlyContinue
         } else {
@@ -242,7 +293,10 @@ Write-Host 'PLUGIN_JSON_VALID=True'
 Write-Host 'UTF8_BOM_FREE=True'
 Write-Host 'SECRET_SCAN_CLEAN=True'
 Write-Host 'GLOBAL_INSTALL_TARGETS=4'
-Write-Host 'POWERSHELL_GLOBAL_INSTALL_IDEMPOTENT=True'
+Write-Host 'SINGLE_INSTALLER_IMPLEMENTATION=True'
+Write-Host 'WRAPPERS_LOGIC_FREE=True'
+Write-Host 'GLOBAL_INSTALL_IDEMPOTENT=True'
+Write-Host 'EXCLUDED_DIRS_NOT_INSTALLED=True'
 Write-Host 'STALE_FILE_CLEANUP=True'
 Write-Host 'VALIDATION_PASSED=True'
 exit 0

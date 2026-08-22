@@ -71,7 +71,9 @@ git clone https://github.com/changyiwu/clasp-gas-skill.git
 bash ./clasp-gas-skill/scripts/install.sh
 ```
 
-全域模式只安裝到**已存在**的 Agent Skill 根目錄，不會替尚未安裝的工具建立空目錄。每個目標都會做遞迴 SHA-256 驗證；重複執行會更新原位置，不會產生巢狀 `clasp-setup/clasp-setup`。
+兩個進入點都只是轉呼叫 `scripts/install.mjs`——安裝邏輯只有這一份，Windows 與 macOS／Linux 跑的是同一段程式碼，不會有兩套實作各自漂移的問題。Node.js 不是額外負擔：clasp v3 本來就要求它。
+
+全域模式只安裝到**已存在**的 Agent Skill 根目錄，不會替尚未安裝的工具建立空目錄。每個目標都會做遞迴 SHA-256 驗證；重複執行會更新原位置，不會產生巢狀 `clasp-setup/clasp-setup`，也會清掉來源已刪除的舊檔。
 安裝器只提供全域安裝，不會在目前 repo 建立專案層級的 Skill 副本。
 
 > 裝完技能沒出現在清單裡 → 重開 agent 或開一個新對話。
@@ -120,9 +122,10 @@ clasp-gas-skill/
 │       └── references/
 │           └── platform-notes.md        ← 四平台安裝細節與 clasp MCP 接法
 ├── scripts/
-│   ├── install.ps1
-│   ├── install.sh
-│   └── validate.ps1                  ← 結構、編碼、安全與重複安裝驗證
+│   ├── install.mjs                   ← 安裝邏輯唯一實作（跨平台共用）
+│   ├── install.ps1                   ← Windows 進入點，只轉呼叫 install.mjs
+│   ├── install.sh                    ← macOS／Linux 進入點，只轉呼叫 install.mjs
+│   └── validate.ps1                  ← 結構、編碼、安全、殼層漂移與重複安裝驗證
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── .gitattributes

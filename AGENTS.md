@@ -38,9 +38,10 @@ clasp-gas-skill/
 │       ├── package-lock.json
 │       └── README.md
 ├── scripts/
-│   ├── install.ps1                 # Windows 安裝器
-│   ├── install.sh                  # macOS／Linux 安裝器
-│   └── validate.ps1                # 結構、安全與 Windows 安裝冪等驗證
+│   ├── install.mjs                 # 安裝邏輯唯一實作（跨平台，Node.js）
+│   ├── install.ps1                 # Windows 進入點，純轉呼叫 install.mjs
+│   ├── install.sh                  # macOS／Linux 進入點，純轉呼叫 install.mjs
+│   └── validate.ps1                # 結構、安全、殼層漂移與安裝冪等驗證
 ├── skills/
 │   └── clasp-setup/
 │       ├── SKILL.md                # 唯一的 Agent 工作流程來源
@@ -106,7 +107,8 @@ clasp-gas-skill/
 ### 驗證要求
 
 - 修改 Skill 後執行 Skill validator；修改 plugin manifest 後執行 plugin validator。
-- 安裝器必須測試首次安裝、重複安裝、更新、來源刪檔後清理與路徑安全。
+- 安裝器必須測試首次安裝、重複安裝、更新、來源刪檔後清理、排除目錄不被安裝與路徑安全。
+- 新增驗證守門後必須做反向測試：故意打壞對應行為，確認驗證器真的會失敗，避免寫出恆真的假檢查。
 - 檢查所有文字檔為有效 UTF-8 且不含 BOM，並執行敏感資訊掃描。
 - 網路或帳號授權不足時，只能回報「未驗證」，不可宣稱 clasp 線上流程已通過。
 
@@ -142,4 +144,5 @@ clasp-gas-skill/
 - 所有回應與文件使用繁體中文。
 - 修改前先確認計畫，優先保留原有資料結構。
 - 使用 `apply_patch` 編輯 repo 檔案；不要用 shell 重建檔案內容。
-- **`install.ps1`（Windows）與 `install.sh`（macOS／Linux，給沒裝 pwsh 的外部使用者）是雙軌實作，有漂移風險**。改任一支就要同步檢查另一支，不可只改一邊。
+- **安裝邏輯只有一份：`scripts/install.mjs`（Node.js，跨平台共用）**。`install.ps1` 與 `install.sh` 是純轉呼叫殼層，**不得含任何複製、排除、雜湊或路徑判斷邏輯**——舊的雙軌實作已漂移過一次，不要走回去。改安裝行為一律只改 `install.mjs`。
+- 選 Node 而非 pwsh 或 Python 的理由：clasp v3 本來就要求 Node.js 22+，不新增任何依賴；要求外部使用者裝 pwsh 則違背 `install.sh` 存在的初衷。
