@@ -57,21 +57,33 @@ Agent Skill 的內容格式可以共用，但全域安裝採四個平台各自�
 
 ### 一鍵安裝
 
-Windows（PowerShell）：
-
-```powershell
-git clone https://github.com/changyiwu/clasp-gas-skill.git
-.\clasp-gas-skill\scripts\install.ps1
-```
-
-macOS／Linux：
+**Windows、macOS、Linux 都是同一行**，不必分平台：
 
 ```bash
 git clone https://github.com/changyiwu/clasp-gas-skill.git
+node ./clasp-gas-skill/scripts/install.mjs
+```
+
+安裝邏輯只有 `scripts/install.mjs` 這一份，三個作業系統跑的是同一段程式碼，不會有兩套實作各自漂移的問題。Node.js 不是額外負擔：clasp v3 本來就要求它，沒裝 Node 這個技能第一步就跑不動。直接呼叫 `node` 也繞開了 Windows 的 PowerShell 執行原則與 `Unblock-File`。
+
+<details>
+<summary>可選：習慣點兩下或用殼層進入點的話</summary>
+
+```powershell
+# Windows
+.\clasp-gas-skill\scripts\install.ps1
+```
+
+```bash
+# macOS／Linux
 bash ./clasp-gas-skill/scripts/install.sh
 ```
 
-兩個進入點都只是轉呼叫 `scripts/install.mjs`——安裝邏輯只有這一份，Windows 與 macOS／Linux 跑的是同一段程式碼，不會有兩套實作各自漂移的問題。Node.js 不是額外負擔：clasp v3 本來就要求它。
+這兩支只負責找到 `node` 並轉呼叫 `install.mjs`，沒有任何自己的安裝邏輯，行為與上面那行完全一樣。
+
+</details>
+
+> 為什麼不做成單一 PowerShell 腳本跑遍 Windows 與 macOS？因為 PowerShell 7 在**兩個平台都不是內建的**——Windows 內建的是 5.1，macOS 內建的是 zsh，等於要使用者各多裝一個 runtime；而 Node 是本來就必須有的。
 
 全域模式只安裝到**已存在**的 Agent Skill 根目錄，不會替尚未安裝的工具建立空目錄。每個目標都會做遞迴 SHA-256 驗證；重複執行會更新原位置，不會產生巢狀 `clasp-setup/clasp-setup`，也會清掉來源已刪除的舊檔。
 安裝器只提供全域安裝，不會在目前 repo 建立專案層級的 Skill 副本。
@@ -122,9 +134,9 @@ clasp-gas-skill/
 │       └── references/
 │           └── platform-notes.md        ← 四平台安裝細節與 clasp MCP 接法
 ├── scripts/
-│   ├── install.mjs                   ← 安裝邏輯唯一實作（跨平台共用）
-│   ├── install.ps1                   ← Windows 進入點，只轉呼叫 install.mjs
-│   ├── install.sh                    ← macOS／Linux 進入點，只轉呼叫 install.mjs
+│   ├── install.mjs                   ← 安裝器本體，也是主要指令（跨平台共用）
+│   ├── install.ps1                   ← 可選的 Windows 進入點，只轉呼叫 install.mjs
+│   ├── install.sh                    ← 可選的 macOS／Linux 進入點，只轉呼叫 install.mjs
 │   └── validate.ps1                  ← 結構、編碼、安全、殼層漂移與重複安裝驗證
 ├── AGENTS.md
 ├── CLAUDE.md

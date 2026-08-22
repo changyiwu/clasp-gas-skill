@@ -38,9 +38,9 @@ clasp-gas-skill/
 │       ├── package-lock.json
 │       └── README.md
 ├── scripts/
-│   ├── install.mjs                 # 安裝邏輯唯一實作（跨平台，Node.js）
-│   ├── install.ps1                 # Windows 進入點，純轉呼叫 install.mjs
-│   ├── install.sh                  # macOS／Linux 進入點，純轉呼叫 install.mjs
+│   ├── install.mjs                 # 安裝邏輯唯一實作，也是對外主要指令（跨平台，Node.js）
+│   ├── install.ps1                 # 可選 Windows 進入點，純轉呼叫 install.mjs
+│   ├── install.sh                  # 可選 macOS／Linux 進入點，純轉呼叫 install.mjs
 │   └── validate.ps1                # 結構、安全、殼層漂移與安裝冪等驗證
 ├── skills/
 │   └── clasp-setup/
@@ -146,4 +146,5 @@ clasp-gas-skill/
 - 修改前先確認計畫，優先保留原有資料結構。
 - 使用 `apply_patch` 編輯 repo 檔案；不要用 shell 重建檔案內容。
 - **安裝邏輯只有一份：`scripts/install.mjs`（Node.js，跨平台共用）**。`install.ps1` 與 `install.sh` 是純轉呼叫殼層，**不得含任何複製、排除、雜湊或路徑判斷邏輯**——舊的雙軌實作已漂移過一次，不要走回去。改安裝行為一律只改 `install.mjs`。
-- 選 Node 而非 pwsh 或 Python 的理由：clasp v3 本來就要求 Node.js 22+，不新增任何依賴；要求外部使用者裝 pwsh 則違背 `install.sh` 存在的初衷。
+- 對外文件的**主要安裝指令是 `node scripts/install.mjs`**，三個作業系統同一行。`install.ps1`／`install.sh` 降級為「可選的方便寫法」，不要再把它們寫成分平台的正式入口——那會讓人誤以為存在兩套安裝方式。
+- 選 Node 而非 pwsh 或 Python 的理由：clasp v3 本來就要求 Node.js 22+，不新增任何依賴。**不要再提議「叫使用者先裝 PowerShell 7 就能單一腳本跑遍 Windows 與 macOS」**——pwsh 7 在兩個平台都不是內建的（Windows 是 5.1、macOS 是 zsh），等於兩邊各多一個 runtime 安裝步驟，而且 5.1 讀無 BOM 的繁中檔會誤判編碼、下載來的 `.ps1` 還卡執行原則。pwsh 7 只在維護者跑 `validate.ps1` 時要求，不是使用者的安裝門檻。
