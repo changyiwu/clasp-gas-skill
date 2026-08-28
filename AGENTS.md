@@ -96,11 +96,13 @@ clasp-gas-skill/
 - `.clasp.json` 只保留在本機並由 `.gitignore` 排除；GitHub 只保存可公開的程式碼與 placeholder 文件。
 - 刪除舊本機 repo 前，必須從本目錄通過 SHA-256、`show-file-status`、部署清單與瀏覽器載入驗證。
 - 刪除舊本機 repo 不等於刪除線上 Apps Script 或 Google Sheets；未經使用者明確要求，不得刪除線上專案、部署或試算表。
+- 線上的 Apps Script 專案與 `StudentGradeSystemDatabase` 試算表都放在雲端硬碟的 `agents/clasp-gas-skill/apps/student-grade-system` 資料夾；搬動只改父資料夾，檔案 ID 不變，`.clasp.json` 的 scriptId 與指令碼屬性 `SPREADSHEET_ID` 都不受影響。
 
 ### 安全與隱私
 
 - 不要在任何檔案放入真實的 scriptId、deploymentId、Google 帳號、OAuth 憑證或其他個資；範例一律使用 `<placeholder>`。
 - 不把 `.clasp.json`、`.clasprc.json`、`.env`、金鑰或 credentials 提交進 git。
+- 這個 repo 就在 Google 雲端硬碟裡，把 Google 原生檔搬進 repo 資料夾時，Drive 桌面版會同步出 `.gsheet`／`.gscript` 捷徑檔；這些檔內含檔案 ID，一律由 `.gitignore` 排除，不進 git。
 - Workspace 帳號、Google 未驗證警告與網頁應用程式公開權限都必須依實際狀態判斷，不使用過度絕對的繞過指示。
 - 網頁應用程式交付前，用非擁有者帳號或無痕視窗驗證實際存取權限。
 
@@ -145,6 +147,7 @@ clasp-gas-skill/
 - 所有回應與文件使用繁體中文。
 - 修改前先確認計畫，優先保留原有資料結構。
 - 使用 `apply_patch` 編輯 repo 檔案；不要用 shell 重建檔案內容。
+- 用 Bash 工具下 `git commit` 一律走 heredoc（`git commit -F - <<'EOF'`）；PowerShell 的 here-string `@'...'@` 在 Bash 裡只是字面字元，會在 commit 訊息頭尾各留一個 `@`。
 - **安裝邏輯只有一份：`scripts/install.mjs`（Node.js，跨平台共用）**。`install.ps1` 與 `install.sh` 是純轉呼叫殼層，**不得含任何複製、排除、雜湊或路徑判斷邏輯**——舊的雙軌實作已漂移過一次，不要走回去。改安裝行為一律只改 `install.mjs`。
 - 對外文件的**主要安裝指令是 `node scripts/install.mjs`**，三個作業系統同一行。`install.ps1`／`install.sh` 降級為「可選的方便寫法」，不要再把它們寫成分平台的正式入口——那會讓人誤以為存在兩套安裝方式。
 - 選 Node 而非 pwsh 或 Python 的理由：clasp v3 本來就要求 Node.js 22+，不新增任何依賴。**不要再提議「叫使用者先裝 PowerShell 7 就能單一腳本跑遍 Windows 與 macOS」**——pwsh 7 在兩個平台都不是內建的（Windows 是 5.1、macOS 是 zsh），等於兩邊各多一個 runtime 安裝步驟，而且 5.1 讀無 BOM 的繁中檔會誤判編碼、下載來的 `.ps1` 還卡執行原則。pwsh 7 只在維護者跑 `validate.ps1` 時要求，不是使用者的安裝門檻。
