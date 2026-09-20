@@ -112,7 +112,7 @@ clasp-gas-skill/
 - 安裝器必須測試首次安裝、重複安裝、更新、來源刪檔後清理、排除目錄不被安裝與路徑安全。
 - 新增驗證守門後必須做反向測試：故意打壞對應行為，確認驗證器真的會失敗，避免寫出恆真的假檢查。
 - 檢查所有文字檔為有效 UTF-8 且不含 BOM，並執行敏感資訊掃描。
-- validator 一律用 PowerShell 7 執行：`pwsh -NoProfile -File .\scripts\validate.ps1`。檔案含繁體中文且專案禁止 BOM，Windows PowerShell 5.1 會誤判編碼。
+- validator 一律用 PowerShell 7 執行：`pwsh -NoProfile -File ./scripts/validate.ps1`。檔案含繁體中文且專案禁止 BOM，Windows PowerShell 5.1 會誤判編碼。
 - 網路或帳號授權不足時，只能回報「未驗證」，不可宣稱 clasp 線上流程已通過。
 
 ## 同步層級（本專案初始化至第 3 層級）

@@ -5,8 +5,8 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path.TrimEnd('\', '/')
-$skillRoot = Join-Path $root 'skills\clasp-setup'
-$appRoot = Join-Path $root 'apps\student-grade-system'
+$skillRoot = Join-Path $root 'skills/clasp-setup'
+$appRoot = Join-Path $root 'apps/student-grade-system'
 $errors = [Collections.Generic.List[string]]::new()
 
 function Add-ValidationError {
@@ -26,27 +26,27 @@ function Get-FileMap {
 }
 
 $required = @(
-    '.codex-plugin\plugin.json',
+    '.codex-plugin/plugin.json',
     '.gitattributes',
     '.gitignore',
     'AGENTS.md',
     'CLAUDE.md',
     'README.md',
-    'apps\student-grade-system\.claspignore',
-    'apps\student-grade-system\app.html',
-    'apps\student-grade-system\appsscript.json',
-    'apps\student-grade-system\gas_code.js',
-    'apps\student-grade-system\index.html',
-    'apps\student-grade-system\package-lock.json',
-    'apps\student-grade-system\package.json',
-    'apps\student-grade-system\README.md',
-    'apps\student-grade-system\style.html',
-    'scripts\install.mjs',
-    'scripts\install.ps1',
-    'scripts\install.sh',
-    'skills\clasp-setup\SKILL.md',
-    'skills\clasp-setup\agents\openai.yaml',
-    'skills\clasp-setup\references\platform-notes.md'
+    'apps/student-grade-system/.claspignore',
+    'apps/student-grade-system/app.html',
+    'apps/student-grade-system/appsscript.json',
+    'apps/student-grade-system/gas_code.js',
+    'apps/student-grade-system/index.html',
+    'apps/student-grade-system/package-lock.json',
+    'apps/student-grade-system/package.json',
+    'apps/student-grade-system/README.md',
+    'apps/student-grade-system/style.html',
+    'scripts/install.mjs',
+    'scripts/install.ps1',
+    'scripts/install.sh',
+    'skills/clasp-setup/SKILL.md',
+    'skills/clasp-setup/agents/openai.yaml',
+    'skills/clasp-setup/references/platform-notes.md'
 )
 
 foreach ($relative in $required) {
@@ -102,7 +102,7 @@ foreach ($requiredText in @(
 }
 
 try {
-    $plugin = Get-Content -LiteralPath (Join-Path $root '.codex-plugin\plugin.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $plugin = Get-Content -LiteralPath (Join-Path $root '.codex-plugin/plugin.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($plugin.name -ne 'clasp-gas-skill') {
         Add-ValidationError 'plugin.json name 必須是 clasp-gas-skill。'
     }
@@ -113,7 +113,7 @@ try {
     Add-ValidationError "plugin.json 無法解析：$($_.Exception.Message)"
 }
 
-$openaiYaml = Get-Content -LiteralPath (Join-Path $skillRoot 'agents\openai.yaml') -Raw -Encoding UTF8
+$openaiYaml = Get-Content -LiteralPath (Join-Path $skillRoot 'agents/openai.yaml') -Raw -Encoding UTF8
 if (-not $openaiYaml.Contains('$clasp-setup')) {
     Add-ValidationError 'agents/openai.yaml 的 default_prompt 必須明確提到 $clasp-setup。'
 }
@@ -172,7 +172,7 @@ foreach ($localClasp in Get-ChildItem -LiteralPath $root -Recurse -File -Force -
 
 # 雙軌漂移守門：安裝邏輯只能有一份（install.mjs），.ps1／.sh 必須是純轉呼叫殼層。
 # 只要有人把複製、排除、雜湊或安裝路徑判斷寫回殼層，這裡就會失敗。
-$installerCore = Join-Path $root 'scripts\install.mjs'
+$installerCore = Join-Path $root 'scripts/install.mjs'
 $installerCoreText = Get-Content -LiteralPath $installerCore -Raw -Encoding UTF8
 foreach ($marker in @('.claude', '.agents', 'opencode', '.gemini', 'sha256', 'CLASP_SKILL_HOME')) {
     if (-not $installerCoreText.Contains($marker)) {
@@ -185,7 +185,7 @@ $forbiddenInWrapper = @(
     'sha256', 'SHA256', 'node_modules', '__pycache__',
     'Copy-Item', 'Remove-Item', 'Get-FileHash', 'cp -R', 'rm -rf'
 )
-foreach ($wrapper in @('scripts\install.ps1', 'scripts\install.sh')) {
+foreach ($wrapper in @('scripts/install.ps1', 'scripts/install.sh')) {
     $wrapperPath = Join-Path $root $wrapper
     $wrapperText = Get-Content -LiteralPath $wrapperPath -Raw -Encoding UTF8
     $wrapperLines = @(Get-Content -LiteralPath $wrapperPath -Encoding UTF8).Count
@@ -210,10 +210,10 @@ $allowedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 try {
     $fakeUserProfile = Join-Path $resolvedTemp 'home'
     $relativeBases = @(
-        '.claude\skills',
-        '.agents\skills',
-        '.config\opencode\skills',
-        '.gemini\config\skills'
+        '.claude/skills',
+        '.agents/skills',
+        '.config/opencode/skills',
+        '.gemini/config/skills'
     )
     foreach ($relativeBase in $relativeBases) {
         New-Item -ItemType Directory -Path (Join-Path $fakeUserProfile $relativeBase) -Force | Out-Null
@@ -232,14 +232,14 @@ try {
         foreach ($relativeBase in $relativeBases) {
             $target = Join-Path $fakeUserProfile (Join-Path $relativeBase 'clasp-setup')
             if (Test-Path -LiteralPath (Join-Path $target 'node_modules')) {
-                Add-ValidationError "排除清單未生效，安裝了 node_modules：$relativeBase\clasp-setup"
+                Add-ValidationError "排除清單未生效，安裝了 node_modules：$(Join-Path $relativeBase clasp-setup)"
             }
         }
         Remove-Item -LiteralPath $excludedDir -Recurse -Force
 
         # 第二次安裝：目標刻意留下舊版殘檔，確認更新會清掉它。
         foreach ($relativeBase in $relativeBases) {
-            $staleFile = Join-Path $fakeUserProfile (Join-Path $relativeBase 'clasp-setup\stale-from-previous-version.txt')
+            $staleFile = Join-Path $fakeUserProfile (Join-Path (Join-Path $relativeBase 'clasp-setup') 'stale-from-previous-version.txt')
             [IO.File]::WriteAllText($staleFile, 'stale', [Text.UTF8Encoding]::new($false))
         }
         & (Join-Path $root 'scripts' 'install.ps1') *> $null
@@ -259,10 +259,10 @@ try {
         $relativeTarget = Join-Path $relativeBase 'clasp-setup'
         $target = Join-Path $fakeUserProfile $relativeTarget
         if (Test-Path -LiteralPath (Join-Path $target 'clasp-setup')) {
-            Add-ValidationError "重複安裝產生巢狀資料夾：$relativeTarget\clasp-setup"
+            Add-ValidationError "重複安裝產生巢狀資料夾：$(Join-Path $relativeTarget clasp-setup)"
         }
         if (Test-Path -LiteralPath (Join-Path $target 'stale-from-previous-version.txt')) {
-            Add-ValidationError "更新後仍殘留舊檔：$relativeTarget\stale-from-previous-version.txt"
+            Add-ValidationError "更新後仍殘留舊檔：$(Join-Path $relativeTarget stale-from-previous-version.txt)"
         }
         $targetMap = Get-FileMap -Base $target
         $bad = @($sourceMap.Keys | Where-Object { $targetMap[$_] -ne $sourceMap[$_] })

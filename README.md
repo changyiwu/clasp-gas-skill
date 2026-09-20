@@ -171,7 +171,7 @@ npx.cmd --yes @google/clasp@3 push
 Windows 可在 repo 根目錄以 PowerShell 7 執行：
 
 ```powershell
-pwsh -NoProfile -File .\scripts\validate.ps1
+pwsh -NoProfile -File ./scripts/validate.ps1
 ```
 
 驗證器會檢查 Skill／plugin 基本結構、四平台文件路徑、UTF-8 BOM、敏感資訊樣式，並在系統暫存目錄模擬四個全域根目錄、連續安裝兩次，確認來源與四個副本的 SHA-256 完全一致。
