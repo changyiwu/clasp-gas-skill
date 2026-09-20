@@ -18,7 +18,7 @@
 先切換到這個資料夾，再以 Windows PowerShell 使用固定 clasp v3：
 
 ```powershell
-cd .\apps\student-grade-system
+cd ./apps/student-grade-system
 npx.cmd --yes @google/clasp@3 show-authorized-user --json
 npx.cmd --yes @google/clasp@3 pull
 npx.cmd --yes @google/clasp@3 push

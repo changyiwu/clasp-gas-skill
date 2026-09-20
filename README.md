@@ -71,7 +71,7 @@ node ./clasp-gas-skill/scripts/install.mjs
 
 ```powershell
 # Windows
-.\clasp-gas-skill\scripts\install.ps1
+./clasp-gas-skill/scripts/install.ps1
 ```
 
 ```bash
@@ -152,7 +152,7 @@ clasp-gas-skill/
 Windows PowerShell 從該資料夾維護線上專案：
 
 ```powershell
-cd .\apps\student-grade-system
+cd ./apps/student-grade-system
 npx.cmd --yes @google/clasp@3 show-authorized-user --json
 npx.cmd --yes @google/clasp@3 show-file-status
 npx.cmd --yes @google/clasp@3 push

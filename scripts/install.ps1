@@ -5,7 +5,7 @@
 # validate.ps1 會擋下含有安裝邏輯的殼層。
 #
 # 用法：
-#   .\scripts\install.ps1
+#   ./scripts/install.ps1
 
 [CmdletBinding()]
 param(
